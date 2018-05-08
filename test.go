@@ -29,7 +29,7 @@ func main() {
 	must(err)
 	key := "009324899209435307429:zqyjhz9e1ki"
 	storm, _ := gs.New(s)
-	_ = storm.Storm(ctx, "dog profile", gs.QueryOption{SearchType: "image"}, key, 10, "filexd")
+	_ = storm.Storm(ctx, "dog profile", gs.QueryOption{SearchType: "image", Start: 11}, key, 10, "records")
 	fmt.Println("finished...")
 	/*
 		r, err := s.Search(ctx, "boein 778", &gs.QueryOption{
