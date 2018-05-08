@@ -67,17 +67,20 @@ func (stf *StormTF) Storm(ctx context.Context, query string, queryOption QueryOp
 		}
 		//fmt.Println("searched and found", len(search.Items))
 		var wg sync.WaitGroup
-		for _, i := range search.Items {
+		for index, _ := range search.Items {
+			i := *search.Items[index]
+			fmt.Println(i.Link)
+
 			wg.Add(1)
 			go func() {
-				item := *i
-				b, err := stf.downloader(ctx, item.Link)
+				fmt.Println(i.Link)
+				b, err := stf.downloader(ctx, i.Link)
 				if err != nil {
 					wg.Done()
 					return
 				}
 				//fmt.Println("will process image", item.Mime)
-				kind := getImgType(item.Mime)
+				kind := getImgType(i.Mime)
 				if kind == "unkown" {
 					wg.Done()
 

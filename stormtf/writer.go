@@ -19,6 +19,7 @@ type writer struct {
 }
 
 func (w *writer) Init(file_path string, strenght int64, handleError func(error)) error {
+	os.Remove(file_path)
 	file, err := os.Create(file_path)
 	if err != nil {
 		return err
@@ -32,10 +33,8 @@ func (w *writer) Init(file_path string, strenght int64, handleError func(error))
 		for {
 			//fmt.Println("IN - LOOP : /!\\")
 			select {
-			case pb, err1 := <-w.wprotoChan:
-				if !err1 {
-					return
-				}
+			case pb := <-w.wprotoChan:
+
 				//fmt.Println("GOT ONE !!!")
 				bytes, err := proto.Marshal(&Sample{
 					Features: pb,
@@ -47,7 +46,7 @@ func (w *writer) Init(file_path string, strenght int64, handleError func(error))
 				}
 				//fmt.Println("GOT ONE ---")
 				w.mu.Lock()
-				_, err = w.w.Write(bytes)
+				in, err := w.w.Write(bytes)
 				w.mu.Unlock()
 
 				if err != nil {
@@ -55,7 +54,7 @@ func (w *writer) Init(file_path string, strenght int64, handleError func(error))
 					w.errorChan <- err
 				}
 				//fmt.Println("WROTE ", in, "bytes to file")
-				fmt.Println("Write")
+				fmt.Println("Write", in, "bytes:", bytes[0:10])
 
 			case <-w.stopChan:
 				//fmt.Println("received stop alert 1")
