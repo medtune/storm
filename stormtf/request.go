@@ -1,7 +1,9 @@
-package httputil
+package stormtf
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 )
@@ -31,6 +33,25 @@ func MakeRequest(ctx context.Context, method, url string, f func(*http.Response,
 	return httpDo(ctx, req, f)
 }
 
+func DownloadBodyRC(ctx context.Context, url string) (io.ReadCloser, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	var body io.ReadCloser
+	err = httpDo(ctx, req, func(r *http.Response, e error) error {
+		if e != nil {
+			return e
+		}
+		body = r.Body
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
+}
+
 // MakeRequestCC Concurent
 func MakeRequestCC(ctx context.Context, method, url string, f func(*http.Response, error) error, done chan error) {
 	go func() { done <- MakeRequest(ctx, method, url, f) }()
@@ -41,7 +62,7 @@ func DoRequest(ctx context.Context, method, url string) ([]byte, error) {
 	var bytes []byte
 	var save = func(r *http.Response, err error) error {
 		if r.Body == nil {
-			return nil
+			return fmt.Errorf("body is empty")
 		}
 		defer r.Body.Close()
 		bytes, err = ioutil.ReadAll(r.Body)

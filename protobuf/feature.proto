@@ -2,7 +2,7 @@ syntax = "proto3";
 
 //option go_package = "github.com/iallabs/stormtf/feature";
 
-package feature;
+package stormtf;
 
 
 // Containers to hold repeated fundamental values.
@@ -48,11 +48,15 @@ message FeatureLists {
   map<string, FeatureList> feature_list = 1;
 };
 
-message Model {
+message Sample {
   Features features = 1;
 };
 
-message SequenceModel {
+message SampleList {
+  repeated Sample model = 1;
+}
+
+message SequenceSample {
   Features context = 1;
   FeatureLists feature_lists = 2;
 };

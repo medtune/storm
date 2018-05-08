@@ -7,16 +7,17 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"time"
 
-	"github.com/iallabs/stormtf/httputil"
+	"github.com/iallabs/stormtf/stormtf"
 )
 
 var url string = "https://pbs.twimg.com/profile_images/616309728688238592/pBeeJQDQ.png"
 var url2 string = "https://www.aha.io/assets/github.7433692cabbfa132f34adb034e7909fa.png"
 
 func test1() {
-	b, err := httputil.GetBody(url)
+	b, err := stormtf.GetBody(url)
 	//fmt.Println(b, err)
 
 	file, err := os.Create("./test.jpg")
@@ -39,19 +40,20 @@ func test2() {
 		fmt.Println("xd", bytes[0])
 		return err
 	}
-	err := httputil.MakeRequest(context.Background(), "GET", url, f)
+	err := stormtf.MakeRequest(context.Background(), "GET", url, f)
 	fmt.Println(err)
 }
 
 func test3() {
 	t := time.Now()
-	_, err := httputil.DoRequest(context.Background(), "GET", url)
+	_, err := stormtf.DoRequest(context.Background(), "GET", url)
 	//fmt.Println(b, err)
 	fmt.Println(time.Since(t), err)
 }
 
 func main() {
-	//test2()
+	a := runtime.GOMAXPROCS(1)
+	fmt.Println(a)
 	go test3()
 	go test3()
 	go test3()
@@ -62,5 +64,76 @@ func main() {
 	go test3()
 	go test3()
 
-	time.Sleep(1 * 1000000000)
+	go test3()
+	go test3()
+	go test3()
+	go test3()
+
+	time.Sleep(0.5 * 1000000000)
+
+	fmt.Println("----")
+
+	go test3()
+	go test3()
+	go test3()
+	go test3()
+
+	go test3()
+	go test3()
+	go test3()
+	go test3()
+
+	go test3()
+	go test3()
+	go test3()
+	go test3()
+
+	time.Sleep(0.5 * 1000000000)
+	fmt.Println("----")
+
+	go test3()
+	go test3()
+	go test3()
+	go test3()
+
+	go test3()
+	go test3()
+	go test3()
+	go test3()
+
+	go test3()
+	go test3()
+	go test3()
+	go test3()
+
+	time.Sleep(0.5 * 1000000000)
+
+	fmt.Println("----")
+
+	go test3()
+	go test3()
+	go test3()
+	go test3()
+
+	go test3()
+	go test3()
+	go test3()
+	go test3()
+
+	go test3()
+	go test3()
+	go test3()
+	go test3()
+
+	time.Sleep(0.5 * 1000000000)
+}
+
+func main1() {
+	a := 1
+	switch {
+	case a > 0:
+		fmt.Println("hello")
+	case a > -1:
+		fmt.Println("hella")
+	}
 }
