@@ -16,23 +16,35 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 
-	"github.com/iallabs/stormtf"
+	"github.com/iallabs/stormtf/stormtf"
 	"github.com/spf13/cobra"
 )
 
 var (
 	Storm *stormtf.StormTF
 
-	Verbose     int    = 1
-	Provider    string = "google"
-	DataType    string = "image"
-	QueryOpt    string = ""
-	ResizeOpt   string = ""
-	ProtoFormat string = "features"
-	OutputFile  string = ""
+	VerboseLevel          int    = 1
+	Provider              string = "google"
+	GoogleCrendetialsPath        = ""
+	Scopes                       = []string{}
+	DataType              string = "image"
+	SearchQuery                  = ""
+	QueryOpt                     = stormtf.QueryOption{}
+	SearchEngineID               = ""
+	ResizeOpt             string = ""
+	ProtoFormat           string = "features"
+	OutputFile            string = ""
+	NumResults                   = 0
 )
+
+func must(err error) {
+	if err != nil {
+		log.Panic(err)
+	}
+}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -40,10 +52,26 @@ var rootCmd = &cobra.Command{
 	Short: "Google.com crawler to generate ready to use tfrecords",
 	Long:  `Google.com crawler to generate ready to use tfrecords`,
 	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Command start")
+		fmt.Println(VerboseLevel, OutputFile, Scopes, GoogleCrendetialsPath)
 
-		if Verbose > 0 {
-			fmt.Println("hey", args)
-		}
+		/*
+			ctx := context.Background()
+			client, err := stormtf.GoogleClientFromJSON(ctx, GoogleCrendetialsPath, Scopes...)
+			must(err)
+			s, err := stormtf.NewGCS(client)
+			must(err)
+			stormAgent, err := stormtf.New(s)
+			must(err)
+			err = stormAgent.Storm(
+				ctx,
+				SearchQuery,
+				QueryOpt,
+				SearchEngineID,
+				NumResults,
+				OutputFile,
+			)
+		*/
 	},
 }
 
@@ -57,7 +85,6 @@ func Execute() {
 }
 
 func init() {
-	Storm = stormtf.New()
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
@@ -65,5 +92,15 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().IntVarP(&Verbose, "verbose", "v", 1, "Set verbosity level")
+
+	rootCmd.Flags().IntVarP(&VerboseLevel, "verbose", "v", 1, "Set verbosity level")
+	rootCmd.Flags().StringVarP(&OutputFile, "output", "o", "records", "Set outfile")
+	rootCmd.Flags().StringVarP(&Provider, "provider", "p", "google", "Set search provider")
+	rootCmd.Flags().StringSliceVarP(&Scopes, "scopes", "s", []string{"https://www.googleapis.com/auth/cse"}, "Set cse scopes")
+	rootCmd.Flags().StringVarP(&DataType, "datatype", "d", "image", "Set search datatype")
+	rootCmd.Flags().StringVarP(&SearchQuery, "query", "q", "", "Set search query")
+	rootCmd.Flags().StringVarP(&SearchEngineID, "engine-id", "e", "-", "Set engine ID")
+	rootCmd.Flags().StringVarP(&ResizeOpt, "resize-format", "r", "linear:256x256", "Resize image formula")
+	rootCmd.Flags().IntVarP(&NumResults, "number", "n", 10, "Set storm crawler max results")
+	rootCmd.Flags().StringVarP(&GoogleCrendetialsPath, "credentials", "c", "", "Set google credentials files")
 }

@@ -10,8 +10,11 @@ import (
 )
 
 const (
-	PNG  = "png"
-	JPEG = "jpeg"
+	PNG    = "png"
+	JPEG   = "jpeg"
+	UNKOWN = "unkown"
+
+	DefaultJPEGQuality = 98
 )
 
 func isSupported(s string) bool {
@@ -60,6 +63,7 @@ func (ip *imageProcess) SetFilters(fs ...filter) {
 
 func (ip *imageProcess) Process(r io.ReadCloser, kind string) (*Features, error) {
 	var img image.Image
+	defer r.Close()
 	if kind == PNG {
 		i, err := png.Decode(r)
 		//fmt.Println("decoded png")
@@ -74,11 +78,17 @@ func (ip *imageProcess) Process(r io.ReadCloser, kind string) (*Features, error)
 			return nil, err
 		}
 		img = i
+	} else if kind == UNKOWN {
+		i, _, err := image.Decode(r)
+		if err != nil {
+			return nil, err
+		}
+		img = i
+		kind = JPEG
 	} else {
 		//fmt.Println("unsupport no decode")
 		return nil, fmt.Errorf("Unkown image encoding type")
 	}
-	r.Close()
 	for _, ofilter := range ip.filters {
 		img = ofilter(img)
 	}
@@ -89,10 +99,10 @@ func (ip *imageProcess) Process(r io.ReadCloser, kind string) (*Features, error)
 	} else {
 		outtype = kind
 	}
-	//fmt.Println("decided type", outtype)
+
 	var buf bytes.Buffer
 	if outtype == JPEG {
-		err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 100})
+		err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: DefaultJPEGQuality})
 		if err != nil {
 			return nil, err
 		}
@@ -104,16 +114,18 @@ func (ip *imageProcess) Process(r io.ReadCloser, kind string) (*Features, error)
 			return nil, err
 		}
 	}
+
 	bif := buf.Bytes()
 	imgfeature := &Feature{
 		Kind: &Feature_BytesList{BytesList: &BytesList{
 			Value: [][]byte{bif},
 		}},
 	}
+
 	fts := &Features{
 		Feature: ip.defaultFeatures,
 	}
+
 	fts.Feature["image"] = imgfeature
-	//fmt.Println("----<<++++", len(bif))
 	return fts, nil
 }

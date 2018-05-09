@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"image/jpeg"
+	"image"
 	"io"
 	"io/ioutil"
 	"log"
@@ -35,24 +35,26 @@ func main() {
 			fmt.Println("--------", err, len(b), b[0:10], count)
 			break
 		} else if err == nil {
-			image := pb.Features.
+			ima := pb.Features.
 				Feature["image"].
 				GetBytesList().Value[0]
-			label := pb.Features.
-				Feature["label"].
-				GetBytesList().Value[0]
-			fmt.Println(string(label))
+
+			//fmt.Println(label)
 			_b, err2 := proto.Marshal(&pb)
 			must(err2)
 			size := len(_b)
 			fmt.Println("size......", size)
-			buf := bytes.NewReader(image)
-			img, err2 := jpeg.Decode(buf)
-			must(err2)
+			buf := bytes.NewReader(ima)
+			img, _, err2 := image.Decode(buf)
+			if err2 != nil {
+				fmt.Println("ERROR DECODING", err2)
+				goto HERE
+			}
 			img = transform.Resize(img, 512, 512, transform.Linear)
 			if err2 := imgio.Save(strconv.Itoa(count)+"filename.png", img, imgio.PNGEncoder()); err != nil {
 				panic(err2)
 			}
+		HERE:
 			b = b[:len(b)-size]
 			fmt.Println(len(b), "-----")
 			if len(b) == 0 {
