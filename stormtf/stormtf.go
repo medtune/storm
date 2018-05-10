@@ -3,17 +3,20 @@ package stormtf
 import (
 	"context"
 	"fmt"
-	"image"
 	"io"
 	"sync"
 	"time"
 
 	"strings"
-
-	"github.com/anthonynsimon/bild/transform"
 )
 
-type errorHandler func(error)
+type Processor interface {
+	AddFilter(interface{})
+	AddFeature(string, *Feature) error
+	SetEncoding(string) error
+
+	Process(io.ReadCloser, string, map[string]*Feature) (*Features, error)
+}
 
 type StormTF struct {
 	itemCount     int16
@@ -23,10 +26,10 @@ type StormTF struct {
 
 	errorHandler errorHandler
 
-	googleSearch   GoogleSearchEngineService
-	downloader     func(context.Context, string) (io.ReadCloser, error)
-	imageProcessor ImageProcessor
-	writer         *writer
+	googleSearch GoogleSearchEngineService
+	downloader   func(context.Context, string) (io.ReadCloser, error)
+	processor    Processor
+	writer       *tfrWriter
 }
 
 func getImgType(s string) string {
@@ -39,30 +42,43 @@ func getImgType(s string) string {
 	return "unkown"
 }
 
-func New(gs GoogleSearchEngineService) (*StormTF, error) {
+func defaultErrorHandler() func(e error) {
+	return func(e error) {
+		logger.Error("/errorChannel: received: %v", e)
+	}
+}
+
+func Testing(gs GoogleSearchEngineService) *StormTF {
 	fs := make(map[string]*Feature)
 	fs["label"] = &Feature{
 		Kind: &Feature_BytesList{BytesList: &BytesList{
 			Value: [][]byte{[]byte("dog")},
 		}},
 	}
-	ip := &imageProcess{
+	ip := &imageProcessor{
 		defaultFeatures: fs,
-		filters: []filter{filter(func(img image.Image) image.Image {
-			return transform.Resize(img, 512, 512, transform.Linear)
-			//return resize.Resize(256, 256, img, resize.Lanczos3)
-		})},
+		filters:         []imageFilter{ResizeImFilter256x256},
 	}
 	return &StormTF{
-		writer:         &writer{},
-		googleSearch:   gs,
-		imageProcessor: ip,
-		errorHandler:   func(e error) { logger.Error("ERROR HANDLER: %v", e) },
-		downloader:     DownloadBodyRC,
-	}, nil
+		writer:       &tfrWriter{},
+		googleSearch: gs,
+		processor:    ip,
+		errorHandler: defaultErrorHandler(),
+		downloader:   downloadBodyRC,
+	}
 }
 
-func (stf *StormTF) Storm(ctx context.Context, query string, queryOption QueryOption, id string,
+func New(gs GoogleSearchEngineService, proc Processor) *StormTF {
+	return &StormTF{
+		writer:       &tfrWriter{},
+		googleSearch: gs,
+		processor:    proc,
+		errorHandler: defaultErrorHandler(),
+		downloader:   downloadBodyRC,
+	}
+}
+
+func (stf *StormTF) Storm(ctx context.Context, query string, queryOption QueryOption,
 	numSamples int64, destination string) error {
 	logger.Debug("Storming started\n")
 
@@ -72,19 +88,18 @@ func (stf *StormTF) Storm(ctx context.Context, query string, queryOption QueryOp
 
 	err := stf.writer.Init(destination, numSamples, stf.errorHandler)
 	if err != nil {
-		logger.Debug("writer couldnt make it. RIP\n")
+		logger.Debug("writer couldnt make it. RIP")
 		return err
 	}
 
 	logger.Debug("Writer is ready\n")
-	stf.googleSearch.SetEngineID(id)
 	opt := queryOption
 	var start int64 = 0
-	logger.Debug("Engine is ready\n")
+	logger.Debug("Starting operations ... query:%v | count:%v\n", query, numSamples)
 	rt1 := time.Now()
 
 	for start*10 < numSamples {
-		logger.Log("Query number %v is pending...\n", start+1)
+		logger.Log("Operation number %v has started", start+1)
 		t1 := time.Now()
 		opt.Start = start * 10
 		search, err := stf.googleSearch.Search(ctx, query, &opt)
@@ -107,7 +122,7 @@ func (stf *StormTF) Storm(ctx context.Context, query string, queryOption QueryOp
 				}
 
 				kind := getImgType(i.Mime)
-				ft, err := stf.imageProcessor.Process(b, kind)
+				ft, err := stf.processor.Process(b, kind, nil)
 				if err != nil {
 					//logger.Log("Error processing image link:%v type:%v\n", i.Link, kind)
 					stf.writer.errorChan <- err
@@ -119,12 +134,18 @@ func (stf *StormTF) Storm(ctx context.Context, query string, queryOption QueryOp
 		}
 
 		wg.Wait()
-		logger.Info("       > Step %v timestamp it in %v (GOROUTINES: %v)\n", start+1, time.Since(t1), 10)
+		logger.Info("Step %v timing: %v Goroutines: %v)\n", start+1, time.Since(t1), 10)
 		start++
 	}
-	logger.Log("Total %v queries took in total: %v\n\n", start, time.Since(rt1))
+	logger.Log("Total operations %v timing: %v", start, time.Since(rt1))
 	stf.writer.mu.Lock()
 	stf.writer.mu.Unlock()
-	stf.writer.Close()
-	return nil
+	if err := stf.writer.Close(); err != nil {
+		logger.Log("Shipped file '%v'", destination)
+	}
+	return err
+}
+
+func (stf *StormTF) GetProcessor() Processor {
+	return stf.processor
 }

@@ -15,4 +15,4 @@
 test.ini
 
 *.png
-records
+*.tfrecords

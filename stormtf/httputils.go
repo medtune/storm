@@ -25,7 +25,7 @@ func httpDo(ctx context.Context, req *http.Request, f func(*http.Response, error
 }
 
 // MakeRequest do http request and exec F function on it Response
-func MakeRequest(ctx context.Context, method, url string, f func(*http.Response, error) error) error {
+func makeRequest(ctx context.Context, method, url string, f func(*http.Response, error) error) error {
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return err
@@ -33,7 +33,7 @@ func MakeRequest(ctx context.Context, method, url string, f func(*http.Response,
 	return httpDo(ctx, req, f)
 }
 
-func DownloadBodyRC(ctx context.Context, url string) (io.ReadCloser, error) {
+func downloadBodyRC(ctx context.Context, url string) (io.ReadCloser, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -52,13 +52,8 @@ func DownloadBodyRC(ctx context.Context, url string) (io.ReadCloser, error) {
 	return body, nil
 }
 
-// MakeRequestCC Concurent
-func MakeRequestCC(ctx context.Context, method, url string, f func(*http.Response, error) error, done chan error) {
-	go func() { done <- MakeRequest(ctx, method, url, f) }()
-}
-
 // DoRequest executes the request and return it response body content
-func DoRequest(ctx context.Context, method, url string) ([]byte, error) {
+func doRequest(ctx context.Context, method, url string) ([]byte, error) {
 	var bytes []byte
 	var save = func(r *http.Response, err error) error {
 		if r.Body == nil {
@@ -68,12 +63,12 @@ func DoRequest(ctx context.Context, method, url string) ([]byte, error) {
 		bytes, err = ioutil.ReadAll(r.Body)
 		return err
 	}
-	err := MakeRequest(ctx, method, url, save)
+	err := makeRequest(ctx, method, url, save)
 	return bytes, err
 }
 
 // GetBody no context
-func GetBody(url string) ([]byte, error) {
+func getBody(url string) ([]byte, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -84,12 +79,4 @@ func GetBody(url string) ([]byte, error) {
 		return nil, err
 	}
 	return bytes, nil
-}
-
-// GetBodyConcurrent no context
-func GetBodyCC(url string, b chan []byte) {
-	go func() {
-		bytes, _ := GetBody(url)
-		b <- bytes
-	}()
 }

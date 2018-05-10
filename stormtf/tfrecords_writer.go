@@ -4,11 +4,11 @@ import (
 	"io"
 	"os"
 	"sync"
-
-	"github.com/golang/protobuf/proto"
 )
 
-type writer struct {
+type errorHandler func(error)
+
+type tfrWriter struct {
 	w           io.WriteCloser
 	mu          sync.Mutex
 	wprotoChan  chan *Features
@@ -17,7 +17,7 @@ type writer struct {
 	errStopChan chan struct{}
 }
 
-func (w *writer) Init(file_path string, strenght int64, handleError func(error)) error {
+func (w *tfrWriter) Init(file_path string, strenght int64, handleError func(error)) error {
 	os.Remove(file_path)
 	file, err := os.Create(file_path)
 	if err != nil {
@@ -35,25 +35,20 @@ func (w *writer) Init(file_path string, strenght int64, handleError func(error))
 			//fmt.Println("IN - LOOP : /!\\")
 			select {
 			case <-w.stopChan:
-				logger.Info("    (+++++) Received stop signal after %v successful writes (total bytes: %v)\n", total, totalb)
+				logger.Debug("Received stop signal after %v successful writes (total bytes: %v)\n", total, totalb)
 				return
 			case pb := <-w.wprotoChan:
 				w.mu.Lock()
-				bytes, err := proto.Marshal(&Sample{
+				in, err := writeTFRecordExample(w.w, &Example{
 					Features: pb,
 				})
 				if err != nil {
 					w.errorChan <- err
-				}
-
-				in, err := w.w.Write(bytes)
-				if err != nil {
-					w.errorChan <- err
+					continue
 				}
 				total++
 				totalb += in
 				w.mu.Unlock()
-
 			}
 
 		}
@@ -69,7 +64,7 @@ func (w *writer) Init(file_path string, strenght int64, handleError func(error))
 				handleError(err)
 				totalErrs++
 			case <-w.errStopChan:
-				logger.Info("    (+++++) Received stop error handling message. Total errors: %v\n", totalErrs)
+				logger.Debug("Received stop error handling message. Total errors: %v\n", totalErrs)
 				return
 			}
 		}
@@ -78,15 +73,17 @@ func (w *writer) Init(file_path string, strenght int64, handleError func(error))
 	return nil
 }
 
-func (w *writer) Close() {
+func (w *tfrWriter) Close() error {
 	w.mu.Lock()
 	w.stopChan <- struct{}{}
 	w.errStopChan <- struct{}{}
 	err := w.w.Close()
 	if err != nil {
-		logger.Warn("Can't close W file. Got %v", err)
+		logger.Warn("Can't close W file. Got %v\n", err)
+		return err
 	}
 	w.mu.Unlock()
 	close(w.wprotoChan)
 	close(w.errorChan)
+	return nil
 }

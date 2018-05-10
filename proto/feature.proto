@@ -1,9 +1,10 @@
 syntax = "proto3";
 
-//option go_package = "github.com/iallabs/stormtf/feature";
-
 package stormtf;
 
+//https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/example/example.proto
+
+//option go_package = "github.com/iallabs/stormtf/feature";
 
 // Containers to hold repeated fundamental values.
 message BytesList {
@@ -48,15 +49,15 @@ message FeatureLists {
   map<string, FeatureList> feature_list = 1;
 };
 
-message Sample {
+message Example {
   Features features = 1;
 };
 
-message SampleList {
-  repeated Sample model = 1;
-}
+message ExampleList {
+  repeated Example features = 1;
+};
 
-message SequenceSample {
+message SequenceExample {
   Features context = 1;
   FeatureLists feature_lists = 2;
 };
