@@ -15,6 +15,7 @@ type tfrWriter struct {
 	stopChan    chan struct{}
 	errorChan   chan error
 	errStopChan chan struct{}
+	doneChan    chan struct{}
 }
 
 func (w *tfrWriter) Init(file_path string, strenght int64, handleError func(error)) error {
@@ -23,20 +24,18 @@ func (w *tfrWriter) Init(file_path string, strenght int64, handleError func(erro
 	if err != nil {
 		return err
 	}
-	//fmt.Println(err, file)
+
 	w.w = file
 	w.wprotoChan = make(chan *Features, strenght)
 	w.errorChan = make(chan error, strenght)
 	w.stopChan = make(chan struct{}, 1)
+	w.doneChan = make(chan struct{}, 2)
+
 	go func() {
 		total := 0
 		totalb := 0
 		for {
-			//fmt.Println("IN - LOOP : /!\\")
 			select {
-			case <-w.stopChan:
-				logger.Debug("Received stop signal after %v successful writes (total bytes: %v)\n", total, totalb)
-				return
 			case pb := <-w.wprotoChan:
 				w.mu.Lock()
 				in, err := writeTFRecordExample(w.w, &Example{
@@ -44,11 +43,17 @@ func (w *tfrWriter) Init(file_path string, strenght int64, handleError func(erro
 				})
 				if err != nil {
 					w.errorChan <- err
+					w.mu.Unlock()
 					continue
 				}
 				total++
 				totalb += in
 				w.mu.Unlock()
+
+			case <-w.stopChan:
+				logger.Debug("Received stop signal after %v successful writes (total bytes: %v)\n", total, totalb)
+				w.doneChan <- struct{}{}
+				return
 			}
 
 		}
@@ -63,8 +68,10 @@ func (w *tfrWriter) Init(file_path string, strenght int64, handleError func(erro
 			case err := <-w.errorChan:
 				handleError(err)
 				totalErrs++
+
 			case <-w.errStopChan:
 				logger.Debug("Received stop error handling message. Total errors: %v\n", totalErrs)
+				w.doneChan <- struct{}{}
 				return
 			}
 		}
@@ -75,15 +82,19 @@ func (w *tfrWriter) Init(file_path string, strenght int64, handleError func(erro
 
 func (w *tfrWriter) Close() error {
 	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	w.stopChan <- struct{}{}
 	w.errStopChan <- struct{}{}
-	err := w.w.Close()
-	if err != nil {
+	if err := w.w.Close(); err != nil {
 		logger.Warn("Can't close W file. Got %v\n", err)
 		return err
 	}
-	w.mu.Unlock()
+
 	close(w.wprotoChan)
 	close(w.errorChan)
+	<-w.doneChan
+	<-w.doneChan
+	close(w.doneChan)
 	return nil
 }

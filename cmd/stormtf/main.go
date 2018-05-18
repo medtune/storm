@@ -60,7 +60,7 @@ func init() {
 	stormtfCmd.Flags().BoolVarP(&AddImageDimFeature, "imgdim", "D", true, "add image dimentions to proto")
 	stormtfCmd.Flags().IntVarP(&NumResults, "number", "n", 0, "Set storm crawler max results")
 	stormtfCmd.Flags().StringVarP(&GoogleCrendetialsPath, "gcreds", "C", "", "Set google credentials files")
-	stormtfCmd.Flags().BoolVarP(&GoogleCredentialDefault, "default-gcreds", "c", true, "Default google creds auth mode")
+	stormtfCmd.Flags().BoolVarP(&GoogleCredentialDefault, "default-gcreds", "c", false, "Default google creds auth mode")
 	stormtfCmd.Flags().IntVarP(&ContextTimeout, "context-timeout", "t", 0, "Context timeout")
 }
 

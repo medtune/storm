@@ -42,7 +42,9 @@ func ResizeImageFilterFromString(s string) (imageFilter, int, int, error) {
 
 }
 
-var ResizeImFilter512x512 = ResizeImageFilter(512, 512, transform.Linear)
-var ResizeImFilter256x256 = ResizeImageFilter(256, 256, transform.Linear)
-var ResizeImFilter128x128 = ResizeImageFilter(128, 128, transform.Linear)
-var ResizeImFilter64x64 = ResizeImageFilter(64, 64, transform.Linear)
+var (
+	ResizeImFilter512x512 = ResizeImageFilter(512, 512, transform.Linear)
+	ResizeImFilter128x128 = ResizeImageFilter(128, 128, transform.Linear)
+	ResizeImFilter256x256 = ResizeImageFilter(256, 256, transform.Linear)
+	ResizeImFilter64x64   = ResizeImageFilter(64, 64, transform.Linear)
+)

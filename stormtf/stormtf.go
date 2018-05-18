@@ -14,7 +14,6 @@ type Processor interface {
 	AddFilter(interface{})
 	AddFeature(string, *Feature) error
 	SetEncoding(string) error
-
 	Process(io.ReadCloser, string, map[string]*Feature) (*Features, error)
 }
 
@@ -116,7 +115,6 @@ func (stf *StormTF) Storm(ctx context.Context, query string, queryOption QueryOp
 				defer wg.Done()
 				b, err := stf.downloader(ctx, i.Link)
 				if err != nil {
-					//logger.Log("Error downloading image link:%v\n", i.Link)
 					stf.writer.errorChan <- err
 					return
 				}
@@ -124,7 +122,6 @@ func (stf *StormTF) Storm(ctx context.Context, query string, queryOption QueryOp
 				kind := getImgType(i.Mime)
 				ft, err := stf.processor.Process(b, kind, nil)
 				if err != nil {
-					//logger.Log("Error processing image link:%v type:%v\n", i.Link, kind)
 					stf.writer.errorChan <- err
 					return
 				}
@@ -137,12 +134,17 @@ func (stf *StormTF) Storm(ctx context.Context, query string, queryOption QueryOp
 		logger.Info("Step %v timing: %v Goroutines: %v)\n", start+1, time.Since(t1), 10)
 		start++
 	}
+
 	logger.Log("Total operations %v timing: %v", start, time.Since(rt1))
 	stf.writer.mu.Lock()
 	stf.writer.mu.Unlock()
-	if err := stf.writer.Close(); err != nil {
+
+	if err := stf.writer.Close(); err == nil {
 		logger.Log("Shipped file '%v'", destination)
+	} else {
+		logger.Log("Error closing file %v", destination)
 	}
+
 	return err
 }
 

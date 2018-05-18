@@ -68,14 +68,12 @@ func (ip *imageProcessor) Process(r io.ReadCloser, kind string, extraFeatures ma
 	defer r.Close()
 	if kind == PNG {
 		i, err := png.Decode(r)
-		//fmt.Println("decoded png")
 		if err != nil {
 			return nil, err
 		}
 		img = i
 	} else if kind == JPEG {
 		i, err := jpeg.Decode(r)
-		//fmt.Println("decoded jped")
 		if err != nil {
 			return nil, err
 		}
@@ -88,9 +86,9 @@ func (ip *imageProcessor) Process(r io.ReadCloser, kind string, extraFeatures ma
 		img = i
 		kind = JPEG
 	} else {
-		//fmt.Println("unsupport no decode")
 		return nil, fmt.Errorf("Unkown image encoding type")
 	}
+
 	for _, ofilter := range ip.filters {
 		img = ofilter(img)
 	}
@@ -123,6 +121,7 @@ func (ip *imageProcessor) Process(r io.ReadCloser, kind string, extraFeatures ma
 			Value: [][]byte{bif},
 		}},
 	}
+
 	size := 0
 	if extraFeatures != nil {
 		size += len(extraFeatures)
@@ -131,26 +130,18 @@ func (ip *imageProcessor) Process(r io.ReadCloser, kind string, extraFeatures ma
 		size += len(ip.defaultFeatures)
 	}
 
-	//Copy map (map pointing)
 	m := make(map[string]*Feature, size)
-	// init Features
 	fts := &Features{Feature: m}
-	// add defaults
 	for i, v := range ip.defaultFeatures {
 		fts.Feature[i] = v
 	}
-	// check feature weither image key exist or not
-	_, ok := fts.Feature[ip.defaultDataKey]
 
-	// error if not allowed to rewrite features
+	_, ok := fts.Feature[ip.defaultDataKey]
 	if ok && !AllowOverWritingFeature {
 		return nil, fmt.Errorf("Cannot overwrite default feature (%v), overwrting rule is %v", "image", AllowOverWritingFeature)
 	}
 
-	// setting image content key
 	fts.Feature[ip.defaultDataKey] = imgfeature
-
-	// add extra features
 	for i, v := range extraFeatures {
 		_, ok := fts.Feature[i]
 		if ok && !AllowOverWritingFeature {
