@@ -79,12 +79,16 @@ func (ip *imageProcessor) Process(r io.ReadCloser, kind string, extraFeatures ma
 		}
 		img = i
 	} else if kind == UNKOWN {
-		i, _, err := image.Decode(r)
+		i, k, err := image.Decode(r)
 		if err != nil {
 			return nil, err
 		}
 		img = i
-		kind = JPEG
+		if k != PNG && k != JPEG {
+			kind = JPEG
+		} else {
+			kind = k
+		}
 	} else {
 		return nil, fmt.Errorf("Unkown image encoding type")
 	}

@@ -4,5 +4,5 @@
 
 `go get -u github.com/iallabs/stormtf/...`
 
-`stormtf -q="dog profile" -e YOUR-ENGINE-ID -n 30 -r linear:300x300 -o file.tfrecords`
+`stormtf -q="mountain view" -e ENGINE-ID -n 30 -r linear:300x300 -o destination.tfrecords`
 

@@ -125,7 +125,6 @@ func (stf *StormTF) Storm(ctx context.Context, query string, queryOption QueryOp
 					stf.writer.errorChan <- err
 					return
 				}
-
 				stf.writer.wprotoChan <- ft
 			}()
 		}
