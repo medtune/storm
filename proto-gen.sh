@@ -6,4 +6,4 @@
 # github.com/golang/grpc
 
 # run at ./stormtf/pb
-protoc -I proto feature.proto --go_out=plugins=grpc:./stormtf --proto_path="$HOME/go/src"
+protoc -I stormtf feature.proto --go_out=plugins=grpc:./stormtf --proto_path="$HOME/go/src"
