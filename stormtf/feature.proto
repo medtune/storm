@@ -4,7 +4,7 @@ package stormtf;
 
 //https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/example/example.proto
 
-//option go_package = "github.com/iallabs/stormtf/feature";
+option go_package = "github.com/iallabs/stormtf/stormtf";
 
 // Containers to hold repeated fundamental values.
 message BytesList {
