@@ -18,6 +18,7 @@ type Processor interface {
 }
 
 type StormTF struct {
+	// TODO
 	itemCount     int16
 	maxThread     int8
 	bucketSize    int8
