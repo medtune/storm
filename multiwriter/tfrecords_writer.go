@@ -5,9 +5,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/medtune/stormtf/features"
-	"github.com/medtune/stormtf/log"
-	"github.com/medtune/stormtf/tfrecords"
+	"github.com/medtune/storm/features"
+	"github.com/medtune/storm/log"
+	"github.com/medtune/storm/tfrecords"
 )
 
 type ErrorHandler func(error)

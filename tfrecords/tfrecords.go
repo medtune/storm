@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/medtune/stormtf/features"
+	"github.com/medtune/storm/features"
 )
 
 const maskDelta uint32 = 0xa282ead8
