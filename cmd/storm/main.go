@@ -21,11 +21,11 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/medtune/stormtf/cse"
-	"github.com/medtune/stormtf/features"
-	"github.com/medtune/stormtf/filters"
-	"github.com/medtune/stormtf/log"
-	"github.com/medtune/stormtf/storm"
+	"github.com/medtune/storm/cse"
+	"github.com/medtune/storm/features"
+	"github.com/medtune/storm/filters"
+	"github.com/medtune/storm/log"
+	"github.com/medtune/storm/storm"
 	"github.com/spf13/cobra"
 )
 

@@ -9,12 +9,12 @@ import (
 
 	"strings"
 
-	"github.com/medtune/stormtf/cse"
-	"github.com/medtune/stormtf/features"
-	"github.com/medtune/stormtf/filters"
-	"github.com/medtune/stormtf/httputil"
-	"github.com/medtune/stormtf/log"
-	"github.com/medtune/stormtf/multiwriter"
+	"github.com/medtune/storm/cse"
+	"github.com/medtune/storm/features"
+	"github.com/medtune/storm/filters"
+	"github.com/medtune/storm/httputil"
+	"github.com/medtune/storm/log"
+	"github.com/medtune/storm/multiwriter"
 )
 
 type Processor interface {

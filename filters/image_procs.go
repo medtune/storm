@@ -8,7 +8,7 @@ import (
 	"image/png"
 	"io"
 
-	"github.com/medtune/stormtf/features"
+	"github.com/medtune/storm/features"
 )
 
 var AllowOverWritingFeature bool
