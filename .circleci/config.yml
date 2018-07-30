@@ -1,23 +1,26 @@
 # Python CircleCI 2.0 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-python/ for more details
+
 version: 2
 jobs:
   build:
     docker:
       - image: circleci/golang:1.10
 
-    working_directory: ~/repo
+    working_directory: /go/src/github.com/medtune/stormtf
 
     steps:
-      
-      - run:
-          name: build binaries - 1
-          command: |
+      - checkout
 
-            go get -u github.com/iallabs/stormtf/...
-  
-           
-            go build /go/src/github.com/iallabs/stormtf/cmd/stormtf/main.go
-            #./examples/regions/main
+      - run:
+          name: download dependencies
+          command: |
+            go get -v -t -d ./...
+      
+
+      - run:
+          name: build binaries
+          command: |
+            go build -v -o stormtf ./cmd/stormtf/main.go
             
