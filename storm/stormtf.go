@@ -1,4 +1,4 @@
-package stormtf
+package storm
 
 import (
 	"context"
@@ -8,13 +8,20 @@ import (
 	"time"
 
 	"strings"
+
+	"github.com/medtune/stormtf/cse"
+	"github.com/medtune/stormtf/features"
+	"github.com/medtune/stormtf/filters"
+	"github.com/medtune/stormtf/httputil"
+	"github.com/medtune/stormtf/log"
+	"github.com/medtune/stormtf/multiwriter"
 )
 
 type Processor interface {
 	AddFilter(interface{})
-	AddFeature(string, *Feature) error
+	AddFeature(string, *features.Feature) error
 	SetEncoding(string) error
-	Process(io.ReadCloser, string, map[string]*Feature) (*Features, error)
+	Process(io.ReadCloser, string, map[string]*features.Feature) (*features.Features, error)
 }
 
 type StormTF struct {
@@ -23,12 +30,12 @@ type StormTF struct {
 	bucketSize    int8
 	maxGoroutines int8
 
-	errorHandler errorHandler
+	errorHandler multiwriter.ErrorHandler
 
-	googleSearch GoogleSearchEngineService
+	googleSearch cse.GoogleSearchEngineService
 	downloader   func(context.Context, string) (io.ReadCloser, error)
 	processor    Processor
-	writer       *tfrWriter
+	writer       *multiwriter.TfrWriter
 }
 
 func getImgType(s string) string {
@@ -43,43 +50,45 @@ func getImgType(s string) string {
 
 func defaultErrorHandler() func(e error) {
 	return func(e error) {
-		logger.Error("/errorChannel: received: %v", e)
+		log.Error("/errorChannel: received: %v", e)
 	}
 }
 
-func Testing(gs GoogleSearchEngineService) *StormTF {
-	fs := make(map[string]*Feature)
-	fs["label"] = &Feature{
-		Kind: &Feature_BytesList{BytesList: &BytesList{
+func Testing(gs cse.GoogleSearchEngineService) *StormTF {
+	fs := make(map[string]*features.Feature)
+	fs["label"] = &features.Feature{
+		Kind: &features.Feature_BytesList{BytesList: &features.BytesList{
 			Value: [][]byte{[]byte("dog")},
 		}},
 	}
-	ip := &imageProcessor{
-		defaultFeatures: fs,
-		filters:         []imageFilter{ResizeImFilter256x256},
+
+	ip := &filters.ImageProcessor{
+		DefaultFeatures: fs,
+		Filters:         []filters.ImageFilter{filters.ResizeImFilter256x256},
 	}
+
 	return &StormTF{
-		writer:       &tfrWriter{},
+		writer:       &multiwriter.TfrWriter{},
 		googleSearch: gs,
 		processor:    ip,
 		errorHandler: defaultErrorHandler(),
-		downloader:   downloadBodyRC,
+		downloader:   httputil.DownloadBodyRC,
 	}
 }
 
-func New(gs GoogleSearchEngineService, proc Processor) *StormTF {
+func New(gs cse.GoogleSearchEngineService, proc Processor) *StormTF {
 	return &StormTF{
-		writer:       &tfrWriter{},
+		writer:       &multiwriter.TfrWriter{},
 		googleSearch: gs,
 		processor:    proc,
 		errorHandler: defaultErrorHandler(),
-		downloader:   downloadBodyRC,
+		downloader:   httputil.DownloadBodyRC,
 	}
 }
 
-func (stf *StormTF) Storm(ctx context.Context, query string, queryOption QueryOption,
+func (stf *StormTF) Storm(ctx context.Context, query string, queryOption cse.QueryOption,
 	numSamples int64, destination string) error {
-	logger.Debug("Storming started\n")
+	log.Debug("Storming started\n")
 
 	if numSamples%10 != 0 {
 		return fmt.Errorf("numSamples must be in form 10 * k, got :%v", numSamples)
@@ -87,18 +96,18 @@ func (stf *StormTF) Storm(ctx context.Context, query string, queryOption QueryOp
 
 	err := stf.writer.Init(destination, numSamples, stf.errorHandler)
 	if err != nil {
-		logger.Debug("writer couldnt make it. RIP")
+		log.Debug("writer couldnt make it. RIP")
 		return err
 	}
 
-	logger.Debug("Writer is ready\n")
+	log.Debug("Writer is ready\n")
 	opt := queryOption
 	var start int64 = 0
-	logger.Debug("Starting operations ... query:%v | count:%v\n", query, numSamples)
+	log.Debug("Starting operations ... query:%v | count:%v\n", query, numSamples)
 	rt1 := time.Now()
 
 	for start*10 < numSamples {
-		logger.Log("Operation number %v has started", start+1)
+		log.Log("Operation number %v has started", start+1)
 		t1 := time.Now()
 		opt.Start = start * 10
 		search, err := stf.googleSearch.Search(ctx, query, &opt)
@@ -115,33 +124,33 @@ func (stf *StormTF) Storm(ctx context.Context, query string, queryOption QueryOp
 				defer wg.Done()
 				b, err := stf.downloader(ctx, i.Link)
 				if err != nil {
-					stf.writer.errorChan <- err
+					stf.writer.ErrorChan <- err
 					return
 				}
 
 				kind := getImgType(i.Mime)
 				ft, err := stf.processor.Process(b, kind, nil)
 				if err != nil {
-					stf.writer.errorChan <- err
+					stf.writer.ErrorChan <- err
 					return
 				}
-				stf.writer.wprotoChan <- ft
+				stf.writer.WprotoChan <- ft
 			}()
 		}
 
 		wg.Wait()
-		logger.Info("Step %v timing: %v Goroutines: %v)\n", start+1, time.Since(t1), 10)
+		log.Info("Step %v timing: %v Goroutines: %v)\n", start+1, time.Since(t1), 10)
 		start++
 	}
 
-	logger.Log("Total operations %v timing: %v", start, time.Since(rt1))
-	stf.writer.mu.Lock()
-	stf.writer.mu.Unlock()
+	log.Log("Total operations %v timing: %v", start, time.Since(rt1))
+	stf.writer.Lock()
+	stf.writer.Unlock()
 
 	if err := stf.writer.Close(); err == nil {
-		logger.Log("Shipped file '%v'", destination)
+		log.Log("Shipped file '%v'", destination)
 	} else {
-		logger.Log("Error closing file %v", destination)
+		log.Log("Error closing file %v", destination)
 	}
 
 	return err

@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/medtune/stormtf/features"
 )
 
 const maskDelta uint32 = 0xa282ead8
@@ -46,7 +47,7 @@ func verifyChecksum(data []byte, crcMasked uint32) bool {
 	return crc == unmaskedCrc
 }
 
-func writeTFRecordExample(w io.Writer, example *Example) (int, error) {
+func WriteTFRecordExample(w io.Writer, example *features.Example) (int, error) {
 	//Format of a single record:
 	//  uint64    length
 	//  uint32    masked crc of length
@@ -82,7 +83,7 @@ func writeTFRecordExample(w io.Writer, example *Example) (int, error) {
 	return in1 + in2 + in3, nil
 }
 
-func readTFRecordExample(r io.Reader) (*Example, error) {
+func ReadTFRecordExample(r io.Reader) (*features.Example, error) {
 	header := make([]byte, 12)
 	_, err := io.ReadFull(r, header)
 	if err != nil {
@@ -113,7 +114,7 @@ func readTFRecordExample(r io.Reader) (*Example, error) {
 		return nil, errors.New("Invalid crc for payload")
 	}
 
-	ex := &Example{}
+	ex := &features.Example{}
 	err = proto.Unmarshal(payload, ex)
 	if err != nil {
 		return nil, err

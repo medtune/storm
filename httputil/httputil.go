@@ -1,4 +1,4 @@
-package stormtf
+package httputil
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func httpDo(ctx context.Context, req *http.Request, f func(*http.Response, error) error) error {
+func HttpDo(ctx context.Context, req *http.Request, f func(*http.Response, error) error) error {
 	// Run the HTTP request in a goroutine and pass the response to f.
 	tr := &http.Transport{}
 	client := &http.Client{Transport: tr}
@@ -26,13 +26,13 @@ func httpDo(ctx context.Context, req *http.Request, f func(*http.Response, error
 	}
 }
 
-func downloadBodyRC(ctx context.Context, url string) (io.ReadCloser, error) {
+func DownloadBodyRC(ctx context.Context, url string) (io.ReadCloser, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 	var body io.ReadCloser
-	err = httpDo(ctx, req, func(r *http.Response, e error) error {
+	err = HttpDo(ctx, req, func(r *http.Response, e error) error {
 		if e != nil {
 			return e
 		}

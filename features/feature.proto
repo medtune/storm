@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-package stormtf;
+package features;
 
 //https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/example/example.proto
 
-option go_package = "github.com/iallabs/stormtf/stormtf";
+option go_package = "github.com/iallabs/stormtf/features";
 
 // Containers to hold repeated fundamental values.
 message BytesList {

@@ -1,4 +1,4 @@
-package stormtf
+package filters
 
 import (
 	"bytes"
@@ -7,6 +7,8 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+
+	"github.com/medtune/stormtf/features"
 )
 
 var AllowOverWritingFeature bool
@@ -23,47 +25,47 @@ func isSupported(s string) bool {
 	return s == PNG || s == JPEG
 }
 
-type imageProcessor struct {
-	filters         []imageFilter
-	defaultDataKey  string
-	defaultEncoding string
-	defaultFeatures map[string]*Feature
+type ImageProcessor struct {
+	Filters         []ImageFilter
+	DefaultDataKey  string
+	DefaultEncoding string
+	DefaultFeatures map[string]*features.Feature
 }
 
-func NewImgProcs() *imageProcessor {
-	return &imageProcessor{defaultFeatures: make(map[string]*Feature)}
+func NewImgProcs() *ImageProcessor {
+	return &ImageProcessor{DefaultFeatures: make(map[string]*features.Feature)}
 }
 
-func NewImgProcsWithFilters(fs ...imageFilter) *imageProcessor {
-	return &imageProcessor{filters: fs}
+func NewImgProcsWithFilters(fs ...ImageFilter) *ImageProcessor {
+	return &ImageProcessor{Filters: fs}
 }
 
-func (ip *imageProcessor) SetDefaultKey(s string) {
-	ip.defaultDataKey = s
+func (ip *ImageProcessor) SetDefaultKey(s string) {
+	ip.DefaultDataKey = s
 }
 
-func (ip *imageProcessor) AddFeature(ft string, f *Feature) error {
-	_, ok := ip.defaultFeatures[ft]
+func (ip *ImageProcessor) AddFeature(ft string, f *features.Feature) error {
+	_, ok := ip.DefaultFeatures[ft]
 	if ok && !AllowOverWritingFeature {
-		return fmt.Errorf("Cannot overwrite default feature (%v), overwrting rule is %v", "image", ft, AllowOverWritingFeature)
+		return fmt.Errorf("Cannot overwrite Default feature (%v), overwrting rule is %v", "image", ft, AllowOverWritingFeature)
 	}
-	ip.defaultFeatures[ft] = f
+	ip.DefaultFeatures[ft] = f
 	return nil
 }
 
-func (ip *imageProcessor) SetEncoding(encoding string) error {
+func (ip *ImageProcessor) SetEncoding(encoding string) error {
 	if !isSupported(encoding) {
 		return fmt.Errorf("Unsupported encoding format %v", encoding)
 	}
-	ip.defaultEncoding = encoding
+	ip.DefaultEncoding = encoding
 	return nil
 }
 
-func (ip *imageProcessor) AddFilter(fs interface{}) {
-	ip.filters = append(ip.filters, fs.(imageFilter))
+func (ip *ImageProcessor) AddFilter(fs interface{}) {
+	ip.Filters = append(ip.Filters, fs.(ImageFilter))
 }
 
-func (ip *imageProcessor) Process(r io.ReadCloser, kind string, extraFeatures map[string]*Feature) (*Features, error) {
+func (ip *ImageProcessor) Process(r io.ReadCloser, kind string, extraFeatures map[string]*features.Feature) (*features.Features, error) {
 	var img image.Image
 	defer r.Close()
 	if kind == PNG {
@@ -93,13 +95,13 @@ func (ip *imageProcessor) Process(r io.ReadCloser, kind string, extraFeatures ma
 		return nil, fmt.Errorf("Unkown image encoding type")
 	}
 
-	for _, ofilter := range ip.filters {
+	for _, ofilter := range ip.Filters {
 		img = ofilter(img)
 	}
 
 	var outtype string
-	if ip.defaultEncoding != "" {
-		outtype = ip.defaultEncoding
+	if ip.DefaultEncoding != "" {
+		outtype = ip.DefaultEncoding
 	} else {
 		outtype = kind
 	}
@@ -120,8 +122,8 @@ func (ip *imageProcessor) Process(r io.ReadCloser, kind string, extraFeatures ma
 	}
 
 	bif := buf.Bytes()
-	imgfeature := &Feature{
-		Kind: &Feature_BytesList{BytesList: &BytesList{
+	imgfeature := &features.Feature{
+		Kind: &features.Feature_BytesList{BytesList: &features.BytesList{
 			Value: [][]byte{bif},
 		}},
 	}
@@ -130,22 +132,22 @@ func (ip *imageProcessor) Process(r io.ReadCloser, kind string, extraFeatures ma
 	if extraFeatures != nil {
 		size += len(extraFeatures)
 	}
-	if ip.defaultFeatures != nil {
-		size += len(ip.defaultFeatures)
+	if ip.DefaultFeatures != nil {
+		size += len(ip.DefaultFeatures)
 	}
 
-	m := make(map[string]*Feature, size)
-	fts := &Features{Feature: m}
-	for i, v := range ip.defaultFeatures {
+	m := make(map[string]*features.Feature, size)
+	fts := &features.Features{Feature: m}
+	for i, v := range ip.DefaultFeatures {
 		fts.Feature[i] = v
 	}
 
-	_, ok := fts.Feature[ip.defaultDataKey]
+	_, ok := fts.Feature[ip.DefaultDataKey]
 	if ok && !AllowOverWritingFeature {
-		return nil, fmt.Errorf("Cannot overwrite default feature (%v), overwrting rule is %v", "image", AllowOverWritingFeature)
+		return nil, fmt.Errorf("Cannot overwrite Default feature (%v), overwrting rule is %v", "image", AllowOverWritingFeature)
 	}
 
-	fts.Feature[ip.defaultDataKey] = imgfeature
+	fts.Feature[ip.DefaultDataKey] = imgfeature
 	for i, v := range extraFeatures {
 		_, ok := fts.Feature[i]
 		if ok && !AllowOverWritingFeature {
