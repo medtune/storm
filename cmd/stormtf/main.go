@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/iallabs/stormtf/stormtf"
+	"github.com/medtune/stormtf/stormtf"
 	"github.com/spf13/cobra"
 )
 
