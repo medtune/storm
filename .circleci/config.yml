@@ -22,5 +22,5 @@ jobs:
       - run:
           name: build binaries
           command: |
-            go build -v -o stormtf ./cmd/stormtf/main.go
+            go build -v -o stormtf.o ./cmd/stormtf/main.go
             

@@ -1,6 +1,6 @@
 # stormtf
 
-[![CircleCI](https://circleci.com/gh/iallabs/stormtf/tree/master.svg?style=svg&circle-token=49db2dcb0f17c017cacbae4040bee21317d6adec)](https://circleci.com/gh/iallabs/stormtf/tree/master)
+[![CircleCI](https://circleci.com/gh/medtune/stormtf.svg?style=svg)](https://circleci.com/gh/medtune/stormtf)
 
 `go get -u github.com/iallabs/stormtf/...`
 
