@@ -1,4 +1,4 @@
-package stormtf
+package filters
 
 import (
 	"fmt"
@@ -9,15 +9,15 @@ import (
 	"github.com/anthonynsimon/bild/transform"
 )
 
-type imageFilter func(image.Image) image.Image
+type ImageFilter func(image.Image) image.Image
 
-func ResizeImageFilter(widgth, hight int, fl transform.ResampleFilter) imageFilter {
-	return imageFilter(func(img image.Image) image.Image {
+func ResizeImageFilter(widgth, hight int, fl transform.ResampleFilter) ImageFilter {
+	return ImageFilter(func(img image.Image) image.Image {
 		return transform.Resize(img, widgth, hight, fl)
 	})
 }
 
-func ResizeImageFilterFromString(s string) (imageFilter, int, int, error) {
+func ResizeImageFilterFromString(s string) (ImageFilter, int, int, error) {
 	ls := strings.Split(s, ":")
 	kind := ls[0]
 	dims := strings.Split(ls[1], "x")

@@ -17,11 +17,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	olog "log"
 	"net/http"
 	"os"
 
-	"github.com/medtune/stormtf/stormtf"
+	"github.com/medtune/stormtf/cse"
+	"github.com/medtune/stormtf/features"
+	"github.com/medtune/stormtf/filters"
+	"github.com/medtune/stormtf/log"
+	"github.com/medtune/stormtf/storm"
 	"github.com/spf13/cobra"
 )
 
@@ -31,7 +35,7 @@ var (
 	GoogleCrendetialsPath   string
 	Scopes                  []string
 	SearchQuery             string
-	QueryOpt                = stormtf.QueryOption{}
+	QueryOpt                = cse.QueryOption{}
 	SearchEngineID          string
 	ResizeOpt               string
 	ImageOutFormat          string
@@ -54,19 +58,19 @@ func init() {
 	stormtfCmd.Flags().StringVarP(&SearchQuery, "query", "q", "", "Set search query")
 	stormtfCmd.Flags().StringVarP(&SearchEngineID, "engine-id", "e", "", "Set engine ID")
 	stormtfCmd.Flags().StringVarP(&ResizeOpt, "resize-format", "r", "linear:256x256", "Resize image formula")
-	stormtfCmd.Flags().StringVarP(&ImageOutFormat, "imout-type", "i", stormtf.JPEG, "Image type encoding")
+	stormtfCmd.Flags().StringVarP(&ImageOutFormat, "imout-type", "i", filters.JPEG, "Image type encoding")
 	stormtfCmd.Flags().StringVarP(&DataKeyName, "data-key", "K", "image", "Set data label name")
 	stormtfCmd.Flags().StringVarP(&DataLabelName, "label", "L", "", "Set data label name")
 	stormtfCmd.Flags().BoolVarP(&AddImageDimFeature, "imgdim", "D", true, "add image dimentions to proto")
 	stormtfCmd.Flags().IntVarP(&NumResults, "number", "n", 0, "Set storm crawler max results")
 	stormtfCmd.Flags().StringVarP(&GoogleCrendetialsPath, "gcreds", "C", "", "Set google credentials files")
-	stormtfCmd.Flags().BoolVarP(&GoogleCredentialDefault, "default-gcreds", "c", false, "Default google creds auth mode")
+	stormtfCmd.Flags().BoolVarP(&GoogleCredentialDefault, "default-gcreds", "c", true, "Default google creds auth mode")
 	stormtfCmd.Flags().IntVarP(&ContextTimeout, "context-timeout", "t", 0, "Context timeout")
 }
 
 func must(err error) {
 	if err != nil {
-		log.Panic(err)
+		olog.Panic(err)
 	}
 }
 
@@ -75,78 +79,81 @@ var stormtfCmd = &cobra.Command{
 	Short: "StormTF #shortdesc",
 	Long:  `stormtf #longdesc`,
 	Run: func(cmd *cobra.Command, args []string) {
-		stormtf.SetLoggingLevel(VerboseLevel)
+		log.SetLoggingLevel(VerboseLevel)
 		ctx := context.Background()
 		if SearchQuery == "" {
-			stormtf.Logger().Error("Must provide search query")
+			log.Error("Must provide search query")
 			return
 		}
 		if SearchEngineID == "" {
-			stormtf.Logger().Error("Must provide search engine ID")
+			log.Error("Must provide search engine ID")
 			return
 		}
 		if NumResults == 0 {
-			stormtf.Logger().Error("Must provide wanted number of results")
+			log.Error("Must provide wanted number of results")
 			return
 		}
 		if DataKeyName == "" {
-			stormtf.Logger().Error("Must provide data key name")
+			log.Error("Must provide data key name")
 			return
 		}
 		if QueryOpt.SearchType != "image" {
-			stormtf.Logger().Error("Unsupported search type %v", QueryOpt.SearchType)
+			log.Error("Unsupported search type %v", QueryOpt.SearchType)
 			return
 		}
+
 		// # TODO Context timeout
 		var client *http.Client
 		if !GoogleCredentialDefault && GoogleCrendetialsPath == "" {
-			stormtf.Logger().Error("Must provide google crendentials auth mode")
+			log.Error("Must provide google crendentials auth mode")
 			return
 		}
 		if GoogleCredentialDefault {
-			c, err := stormtf.DefaultGoogleClient(ctx, stormtf.GoogleCustomSearchScope)
+			c, err := cse.DefaultGoogleClient(ctx, cse.GoogleCustomSearchScope)
 			if err != nil {
-				stormtf.Logger().Error("Coudlnt get client. Scope: %v Error:%v", stormtf.GoogleCustomSearchScope, err)
+				log.Error("Coudlnt get client. Scope: %v Error:%v", cse.GoogleCustomSearchScope, err)
 				return
 			}
 			client = c
 		} else {
-			c, err := stormtf.GoogleClientFromJSON(ctx, GoogleCrendetialsPath, stormtf.GoogleCustomSearchScope)
+			c, err := cse.GoogleClientFromJSON(ctx, GoogleCrendetialsPath, cse.GoogleCustomSearchScope)
 			if err != nil {
-				stormtf.Logger().Error("Coudlnt get client. Scope: %v Error:%v", stormtf.GoogleCustomSearchScope, err)
+				log.Error("Coudlnt get client. Scope: %v Error:%v", cse.GoogleCustomSearchScope, err)
 				return
 			}
 			client = c
 		}
-		service, err := stormtf.NewGCS(client)
+		service, err := cse.NewGCS(client)
 		if err != nil {
-			stormtf.Logger().Error("Coudlnt get GCS Service. Error:%v", err)
+			log.Error("Coudlnt get GCS Service. Error:%v", err)
 			return
 		}
 
 		service.SetEngineID(SearchEngineID)
-		imgProc := stormtf.NewImgProcs()
+		imgProc := filters.NewImgProcs()
 		if DataLabelName == "" {
 			DataLabelName = SearchQuery
 		}
-		imgProc.AddFeature("label", stormtf.LabelFeature(DataLabelName))
-		if imf, x, y, err := stormtf.ResizeImageFilterFromString(ResizeOpt); err != nil {
-			stormtf.Logger().Error("Error filter string format. Error:%v", err)
+		imgProc.AddFeature("label", features.LabelFeature(DataLabelName))
+		if imf, x, y, err := filters.ResizeImageFilterFromString(ResizeOpt); err != nil {
+			log.Error("Error filter string format. Error:%v", err)
 			return
 		} else {
 			imgProc.AddFilter(imf)
 			if AddImageDimFeature {
-				imgProc.AddFeature("height", stormtf.NewInt64ListFeature(int64(x)))
-				imgProc.AddFeature("width", stormtf.NewInt64ListFeature(int64(y)))
+				imgProc.AddFeature("height", features.NewInt64ListFeature(int64(x)))
+				imgProc.AddFeature("width", features.NewInt64ListFeature(int64(y)))
 			}
 		}
 		imgProc.SetDefaultKey(DataKeyName)
-		storm := stormtf.New(service, imgProc)
+		storm := storm.New(service, imgProc)
+		var op string
 		if OutputFile == "" {
-			OutputFile = SearchQuery + "." + tfrecordsExt
+			op = SearchQuery + "." + tfrecordsExt
 		} else {
-			OutputFile = OutputFile + "." + tfrecordsExt
+			op = OutputFile + "." + tfrecordsExt
 		}
+		OutputFile = op
 		err = storm.Storm(
 			ctx,
 			SearchQuery,
@@ -154,6 +161,9 @@ var stormtfCmd = &cobra.Command{
 			int64(NumResults),
 			OutputFile,
 		)
+		if err != nil {
+			log.Error("error: %v", err)
+		}
 		return
 	},
 }

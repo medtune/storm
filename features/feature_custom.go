@@ -1,4 +1,4 @@
-package stormtf
+package features
 
 func NewBytesListFeature(bytes ...[]byte) *Feature {
 	return &Feature{
