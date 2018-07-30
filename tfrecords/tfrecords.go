@@ -1,4 +1,4 @@
-package stormtf
+package tfrecords
 
 import (
 	"encoding/binary"
